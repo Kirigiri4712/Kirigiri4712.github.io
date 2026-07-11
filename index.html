@@ -1,242 +1,53 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Retro Pong</title>
-
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Stick Army Mini</title>
 <style>
-    body{
-        margin:0;
-        background:black;
-        overflow:hidden;
-        display:flex;
-        justify-content:center;
-        align-items:center;
-        height:100vh;
-        font-family:monospace;
-    }
-
-    canvas{
-        border:4px solid white;
-        image-rendering: pixelated;
-        background:black;
-    }
-
-    #info{
-        position:absolute;
-        top:10px;
-        color:white;
-        font-size:18px;
-        text-align:center;
-    }
+html,body{
+margin:0;
+padding:0;
+overflow:hidden;
+background:#87ceeb;
+font-family:sans-serif;
+}
+canvas{
+display:block;
+background:#87ceeb;
+}
+#ui{
+position:absolute;
+left:10px;
+top:10px;
+background:rgba(255,255,255,.85);
+padding:10px;
+border-radius:8px;
+user-select:none;
+}
+button{
+display:block;
+margin-top:6px;
+width:120px;
+height:32px;
+}
 </style>
 </head>
 <body>
 
-<div id="info">
-    マウスで左のバーを操作<br>
-    古典的PONGゲーム
+<div id="ui">
+<div id="coinText"></div>
+<div id="bossText"></div>
+<div id="unitText"></div>
+
+<button id="hpBtn">HP+</button>
+<button id="atkBtn">ATK+</button>
+<button id="countBtn">人数+</button>
 </div>
 
-<canvas id="game" width="900" height="500"></canvas>
+<canvas id="game"></canvas>
 
-<script>
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
-
-const WIDTH = canvas.width;
-const HEIGHT = canvas.height;
-
-// =========================
-// プレイヤー
-// =========================
-const player = {
-    x: 20,
-    y: HEIGHT / 2 - 50,
-    width: 14,
-    height: 100,
-    speed: 0
-};
-
-// =========================
-// CPU
-// =========================
-const cpu = {
-    x: WIDTH - 34,
-    y: HEIGHT / 2 - 50,
-    width: 14,
-    height: 100,
-    speed: 4
-};
-
-// =========================
-// ボール
-// =========================
-const ball = {
-    x: WIDTH / 2,
-    y: HEIGHT / 2,
-    size: 12,
-    vx: 6,
-    vy: 4
-};
-
-let playerScore = 0;
-let cpuScore = 0;
-
-// =====================================
-// マウス操作
-// =====================================
-canvas.addEventListener("mousemove", (e) => {
-    const rect = canvas.getBoundingClientRect();
-    const mouseY = e.clientY - rect.top;
-
-    player.y = mouseY - player.height / 2;
-
-    // 画面外防止
-    if(player.y < 0) player.y = 0;
-    if(player.y + player.height > HEIGHT){
-        player.y = HEIGHT - player.height;
-    }
-});
-
-// =====================================
-// 描画関数
-// =====================================
-function drawRect(x, y, w, h, color="white"){
-    ctx.fillStyle = color;
-    ctx.fillRect(x, y, w, h);
-}
-
-function drawBall(){
-    drawRect(ball.x, ball.y, ball.size, ball.size);
-}
-
-function drawNet(){
-    for(let y=0; y<HEIGHT; y+=30){
-        drawRect(WIDTH/2 - 2, y, 4, 16);
-    }
-}
-
-function drawText(text, x, y){
-    ctx.fillStyle = "white";
-    ctx.font = "40px monospace";
-    ctx.fillText(text, x, y);
-}
-
-// =====================================
-// 当たり判定
-// =====================================
-function collision(ball, paddle){
-    return (
-        ball.x < paddle.x + paddle.width &&
-        ball.x + ball.size > paddle.x &&
-        ball.y < paddle.y + paddle.height &&
-        ball.y + ball.size > paddle.y
-    );
-}
-
-// =====================================
-// リセット
-// =====================================
-function resetBall(){
-    ball.x = WIDTH / 2;
-    ball.y = HEIGHT / 2;
-
-    // 方向反転
-    ball.vx = -ball.vx;
-
-    // ランダム角度
-    ball.vy = (Math.random() * 6) - 3;
-}
-
-// =====================================
-// 更新処理
-// =====================================
-function update(){
-
-    // ボール移動
-    ball.x += ball.vx;
-    ball.y += ball.vy;
-
-    // 上下壁反射
-    if(ball.y <= 0 || ball.y + ball.size >= HEIGHT){
-        ball.vy *= -1;
-    }
-
-    // CPU追尾
-    const cpuCenter = cpu.y + cpu.height / 2;
-
-    if(cpuCenter < ball.y){
-        cpu.y += cpu.speed;
-    }else{
-        cpu.y -= cpu.speed;
-    }
-
-    // プレイヤー衝突
-    if(collision(ball, player)){
-        ball.vx = Math.abs(ball.vx);
-
-        // 打点で角度変化
-        let hitPos = (ball.y - (player.y + player.height / 2));
-        ball.vy = hitPos * 0.15;
-    }
-
-    // CPU衝突
-    if(collision(ball, cpu)){
-        ball.vx = -Math.abs(ball.vx);
-
-        let hitPos = (ball.y - (cpu.y + cpu.height / 2));
-        ball.vy = hitPos * 0.15;
-    }
-
-    // 得点
-    if(ball.x < 0){
-        cpuScore++;
-        resetBall();
-    }
-
-    if(ball.x > WIDTH){
-        playerScore++;
-        resetBall();
-    }
-}
-
-// =====================================
-// 描画
-// =====================================
-function render(){
-
-    // 背景
-    drawRect(0,0,WIDTH,HEIGHT,"black");
-
-    // ネット
-    drawNet();
-
-    // スコア
-    drawText(playerScore, WIDTH/4, 60);
-    drawText(cpuScore, WIDTH*3/4, 60);
-
-    // パドル
-    drawRect(player.x, player.y, player.width, player.height);
-    drawRect(cpu.x, cpu.y, cpu.width, cpu.height);
-
-    // ボール
-    drawBall();
-}
-
-// =====================================
-// メインループ
-// =====================================
-function gameLoop(){
-    update();
-    render();
-    requestAnimationFrame(gameLoop);
-}
-
-gameLoop();
-
-</script>
+<script src="game.js"></script>
 
 </body>
 </html>
