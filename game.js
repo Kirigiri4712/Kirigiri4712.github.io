@@ -16,6 +16,8 @@ const ui = {
 	coin: document.getElementById('coinText'),
 	boss: document.getElementById('bossText'),
 	unit: document.getElementById('unitText'),
+	unitStatus: document.getElementById('unitStatusText'),
+	unitRespawnTime: document.getElementById('unitRespawnTimeText'),
 };
 
 const state = {
@@ -283,6 +285,12 @@ function updateUI() {
 	ui.boss.textContent = 'Boss Lv : ' + state.bossLevel + '  HP : ' + Math.ceil(boss.hp) + '/' + boss.maxHp;
 
 	ui.unit.textContent = '人数 ' + units.length + '/' + state.maxUnits;
+
+	ui.unitStatus.textContent =
+		'Unit HP Level : ' + state.hpLevel + '  ATK Level : ' + state.atkLevel + '  Count Level : ' + state.countLevel;
+
+	ui.unitRespawnTime.textContent =
+		'Unit Respawn Time : ' + (state.spawnInterval - state.spawnTimer) + '/' + state.spawnInterval;
 }
 
 function loop() {
@@ -294,8 +302,6 @@ function loop() {
 
 	requestAnimationFrame(loop);
 }
-
-loop();
 
 canvas.addEventListener('mousedown', (e) => {
 	const rect = canvas.getBoundingClientRect();
@@ -458,7 +464,6 @@ canvas.addEventListener(
 canvas.addEventListener('touchend', releaseDrag);
 
 resize();
-loop();
 
 function initGame() {
 	state.coins = 0;
@@ -487,6 +492,7 @@ function initGame() {
 }
 
 initGame();
+loop();
 
 if (typeof window !== 'undefined') {
 	window.gameState = state;
