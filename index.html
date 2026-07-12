@@ -1,53 +1,53 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Stick Army Mini</title>
-<style>
-html,body{
-margin:0;
-padding:0;
-overflow:hidden;
-background:#87ceeb;
-font-family:sans-serif;
-}
-canvas{
-display:block;
-background:#87ceeb;
-}
-#ui{
-position:absolute;
-left:10px;
-top:10px;
-background:rgba(255,255,255,.85);
-padding:10px;
-border-radius:8px;
-user-select:none;
-}
-button{
-display:block;
-margin-top:6px;
-width:120px;
-height:32px;
-}
-</style>
-</head>
-<body>
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+		<title>Stick Army Mini</title>
+		<style>
+			html,
+			body {
+				margin: 0;
+				padding: 0;
+				overflow: hidden;
+				background: #87ceeb;
+				font-family: sans-serif;
+			}
+			canvas {
+				display: block;
+				background: #87ceeb;
+			}
+			#ui {
+				position: absolute;
+				left: 10px;
+				top: 10px;
+				background: rgba(255, 255, 255, 0.85);
+				padding: 10px;
+				border-radius: 8px;
+				user-select: none;
+			}
+			button {
+				display: block;
+				margin-top: 6px;
+				width: 120px;
+				height: 32px;
+			}
+		</style></head
+	>F
+	<body>
+		<div id="ui">
+			<div id="coinText"></div>
+			<div id="bossText"></div>
+			<div id="unitText"></div>
+			<div id="unitStatusText"></div>
 
-<div id="ui">
-<div id="coinText"></div>
-<div id="bossText"></div>
-<div id="unitText"></div>
+			<button id="hpBtn">HP+</button>
+			<button id="atkBtn">ATK+</button>
+			<button id="countBtn">人数+</button>
+		</div>
 
-<button id="hpBtn">HP+</button>
-<button id="atkBtn">ATK+</button>
-<button id="countBtn">人数+</button>
-</div>
+		<canvas id="game"></canvas>
 
-<canvas id="game"></canvas>
-
-<script src="game.js"></script>
-
-</body>
+		<script src="game.js"></script>
+	</body>
 </html>

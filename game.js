@@ -1,661 +1,497 @@
-const canvas=document.getElementById("game");
-const ctx=canvas.getContext("2d");
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
 
-function resize(){
-canvas.width=window.innerWidth;
-canvas.height=window.innerHeight;
-groundY=canvas.height-80;
-boss.x=canvas.width-220;
-boss.y=groundY-boss.h;
+function resize() {
+	canvas.width = window.innerWidth;
+	canvas.height = window.innerHeight;
+	groundY = canvas.height - 80;
+	boss.x = canvas.width - 220;
+	boss.y = groundY - boss.h;
 }
-window.addEventListener("resize",resize);
+window.addEventListener('resize', resize);
 
-let groundY=0;
+let groundY = 0;
 
-const ui={
-coin:document.getElementById("coinText"),
-boss:document.getElementById("bossText"),
-unit:document.getElementById("unitText")
+const ui = {
+	coin: document.getElementById('coinText'),
+	boss: document.getElementById('bossText'),
+	unit: document.getElementById('unitText'),
 };
 
-const state={
-coins:0,
+const state = {
+	coins: 0,
 
-hpLevel:1,
-atkLevel:1,
-countLevel:1,
+	hpLevel: 1,
+	atkLevel: 1,
+	countLevel: 1,
 
-bossLevel:1,
+	bossLevel: 1,
 
-spawnInterval:40,
-spawnTimer:0,
+	spawnInterval: 40,
+	spawnTimer: 0,
 
-maxUnits:10,
+	maxUnits: 10,
 
-drag:null,
+	drag: null,
 
-effects:[]
+	effects: [],
 };
 
-const units=[];
+const units = [];
 
-const boss={
-x:0,
-y:0,
-w:120,
-h:220,
+const boss = {
+	x: 0,
+	y: 0,
+	w: 120,
+	h: 220,
 
-maxHp:300,
-hp:300,
+	maxHp: 300,
+	hp: 300,
 
-atk:20,
+	atk: 20,
 
-cooldown:0
+	cooldown: 0,
 };
 
-class Unit{
+class Unit {
+	constructor() {
+		this.reset();
+	}
 
-constructor(){
+	reset() {
+		this.x = 80;
+		this.y = groundY - 32;
 
-this.reset();
+		this.w = 16;
+		this.h = 32;
 
+		this.maxHp = 40 + (state.hpLevel - 1) * 20;
+		this.hp = this.maxHp;
+
+		this.atk = 5 + (state.atkLevel - 1) * 3;
+
+		this.speed = 1.2 + Math.random() * 0.6;
+
+		this.dead = false;
+
+		this.dragging = false;
+	}
+
+	update() {
+		if (this.dragging) return;
+
+		if (this.dead) {
+			this.reset();
+			return;
+		}
+
+		const reach = boss.x - this.x;
+
+		if (reach > 28) {
+			this.x += this.speed;
+		} else {
+			boss.hp -= this.atk * 0.15;
+
+			addEffect(boss.x + Math.random() * 40, boss.y + 80 + Math.random() * 50, 12);
+		}
+	}
+
+	draw() {
+		ctx.save();
+
+		ctx.translate(this.x, this.y);
+
+		ctx.strokeStyle = '#000';
+		ctx.lineWidth = 2;
+
+		ctx.beginPath();
+
+		ctx.arc(0, -18, 6, 0, Math.PI * 2);
+
+		ctx.stroke();
+
+		ctx.beginPath();
+
+		ctx.moveTo(0, -12);
+		ctx.lineTo(0, 6);
+
+		ctx.moveTo(-8, -2);
+		ctx.lineTo(8, -2);
+
+		ctx.moveTo(0, 6);
+		ctx.lineTo(-6, 18);
+
+		ctx.moveTo(0, 6);
+		ctx.lineTo(6, 18);
+
+		ctx.stroke();
+
+		ctx.restore();
+	}
+
+	damage(d) {
+		this.hp -= d;
+
+		if (this.hp <= 0) {
+			this.dead = true;
+		}
+	}
 }
 
-reset(){
+function spawnUnit() {
+	if (units.length >= state.maxUnits) return;
 
-this.x=80;
-this.y=groundY-32;
-
-this.w=16;
-this.h=32;
-
-this.maxHp=40+(state.hpLevel-1)*20;
-this.hp=this.maxHp;
-
-this.atk=5+(state.atkLevel-1)*3;
-
-this.speed=1.2+Math.random()*0.6;
-
-this.dead=false;
-
-this.dragging=false;
-
+	units.push(new Unit());
 }
 
-update(){
-
-if(this.dragging)return;
-
-if(this.dead){
-
-this.reset();
-return;
-
+function addEffect(x, y, size) {
+	state.effects.push({
+		x,
+		y,
+		size,
+		life: 20,
+	});
 }
 
-const reach=boss.x-this.x;
+function updateEffects() {
+	for (let i = state.effects.length - 1; i >= 0; i--) {
+		const e = state.effects[i];
 
-if(reach>28){
+		e.life--;
 
-this.x+=this.speed;
+		e.size *= 0.96;
 
-}else{
-
-boss.hp-=this.atk*0.15;
-
-addEffect(
-boss.x+Math.random()*40,
-boss.y+80+Math.random()*50,
-12
-);
-
+		if (e.life <= 0) {
+			state.effects.splice(i, 1);
+		}
+	}
 }
 
-}
+function drawEffects() {
+	ctx.fillStyle = 'orange';
 
-draw(){
+	for (const e of state.effects) {
+		ctx.beginPath();
 
-ctx.save();
+		ctx.arc(e.x, e.y, e.size, 0, Math.PI * 2);
 
-ctx.translate(this.x,this.y);
-
-ctx.strokeStyle="#000";
-ctx.lineWidth=2;
-
-ctx.beginPath();
-
-ctx.arc(0,-18,6,0,Math.PI*2);
-
-ctx.stroke();
-
-ctx.beginPath();
-
-ctx.moveTo(0,-12);
-ctx.lineTo(0,6);
-
-ctx.moveTo(-8,-2);
-ctx.lineTo(8,-2);
-
-ctx.moveTo(0,6);
-ctx.lineTo(-6,18);
-
-ctx.moveTo(0,6);
-ctx.lineTo(6,18);
-
-ctx.stroke();
-
-ctx.restore();
-
-}
-
-damage(d){
-
-this.hp-=d;
-
-if(this.hp<=0){
-
-this.dead=true;
-
-}
-
-}
-
-}
-
-function spawnUnit(){
-
-if(units.length>=state.maxUnits)return;
-
-units.push(new Unit());
-
-}
-
-function addEffect(x,y,size){
-
-state.effects.push({
-
-x,
-y,
-size,
-life:20
-
-});
-
-}
-
-function updateEffects(){
-
-for(let i=state.effects.length-1;i>=0;i--){
-
-const e=state.effects[i];
-
-e.life--;
-
-e.size*=0.96;
-
-if(e.life<=0){
-
-state.effects.splice(i,1);
-
-}
-
-}
-
-}
-
-function drawEffects(){
-
-ctx.fillStyle="orange";
-
-for(const e of state.effects){
-
-ctx.beginPath();
-
-ctx.arc(e.x,e.y,e.size,0,Math.PI*2);
-
-ctx.fill();
-
-}
-
+		ctx.fill();
+	}
 }
 
 resize();
 
-function updateBoss(){
+function updateBoss() {
+	boss.cooldown--;
 
-boss.cooldown--;
+	if (boss.cooldown <= 0) {
+		boss.cooldown = 120;
 
-if(boss.cooldown<=0){
+		for (const u of units) {
+			if (u.dead) continue;
 
-boss.cooldown=120;
+			const dx = Math.abs(u.x + u.w / 2 - (boss.x + boss.w / 2));
 
-for(const u of units){
+			if (dx < 170) {
+				u.damage(boss.atk);
 
-if(u.dead)continue;
+				addEffect(u.x, u.y, 18);
+			}
+		}
+	}
 
-const dx=Math.abs((u.x+u.w/2)-(boss.x+boss.w/2));
+	if (boss.hp <= 0) {
+		state.coins += 50 * state.bossLevel;
 
-if(dx<170){
+		state.bossLevel++;
 
-u.damage(boss.atk);
+		boss.maxHp = Math.floor(boss.maxHp * 1.35);
 
-addEffect(u.x,u.y,18);
+		boss.hp = boss.maxHp;
 
+		boss.atk = Math.floor(boss.atk * 1.15);
+
+		addEffect(boss.x + boss.w / 2, boss.y + boss.h / 2, 60);
+	}
 }
 
+function updateGame() {
+	state.spawnTimer++;
+
+	if (state.spawnTimer >= state.spawnInterval) {
+		state.spawnTimer = 0;
+
+		spawnUnit();
+	}
+
+	for (const u of units) {
+		u.update();
+	}
+
+	updateBoss();
+
+	updateEffects();
 }
 
+function drawGround() {
+	ctx.fillStyle = '#5a9b41';
+
+	ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
 }
 
-if(boss.hp<=0){
+function drawBoss() {
+	ctx.fillStyle = '#444';
 
-state.coins+=50*state.bossLevel;
+	ctx.fillRect(boss.x, boss.y, boss.w, boss.h);
 
-state.bossLevel++;
+	ctx.fillStyle = '#fff';
 
-boss.maxHp=Math.floor(boss.maxHp*1.35);
+	ctx.fillRect(boss.x + 20, boss.y + 35, 16, 16);
 
-boss.hp=boss.maxHp;
+	ctx.fillRect(boss.x + 84, boss.y + 35, 16, 16);
 
-boss.atk=Math.floor(boss.atk*1.15);
+	ctx.fillStyle = 'red';
 
-addEffect(
-boss.x+boss.w/2,
-boss.y+boss.h/2,
-60
-);
+	ctx.fillRect(boss.x, boss.y - 18, boss.w, 8);
 
+	ctx.fillStyle = 'lime';
+
+	ctx.fillRect(boss.x, boss.y - 18, boss.w * (boss.hp / boss.maxHp), 8);
 }
 
+function drawUnits() {
+	for (const u of units) {
+		u.draw();
+	}
 }
 
-function updateGame(){
+function drawBackground() {
+	ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-state.spawnTimer++;
+	drawGround();
 
-if(state.spawnTimer>=state.spawnInterval){
+	drawBoss();
 
-state.spawnTimer=0;
+	drawUnits();
 
-spawnUnit();
-
+	drawEffects();
 }
 
-for(const u of units){
+function updateUI() {
+	ui.coin.textContent = 'Coin : ' + state.coins;
 
-u.update();
+	ui.boss.textContent = 'Boss Lv : ' + state.bossLevel + '  HP : ' + Math.ceil(boss.hp) + '/' + boss.maxHp;
 
+	ui.unit.textContent = '人数 ' + units.length + '/' + state.maxUnits;
 }
 
-updateBoss();
+function loop() {
+	updateGame();
 
-updateEffects();
+	drawBackground();
 
-}
+	updateUI();
 
-function drawGround(){
-
-ctx.fillStyle="#5a9b41";
-
-ctx.fillRect(
-0,
-groundY,
-canvas.width,
-canvas.height-groundY
-);
-
-}
-
-function drawBoss(){
-
-ctx.fillStyle="#444";
-
-ctx.fillRect(
-boss.x,
-boss.y,
-boss.w,
-boss.h
-);
-
-ctx.fillStyle="#fff";
-
-ctx.fillRect(
-boss.x+20,
-boss.y+35,
-16,
-16
-);
-
-ctx.fillRect(
-boss.x+84,
-boss.y+35,
-16,
-16
-);
-
-ctx.fillStyle="red";
-
-ctx.fillRect(
-boss.x,
-boss.y-18,
-boss.w,
-8
-);
-
-ctx.fillStyle="lime";
-
-ctx.fillRect(
-boss.x,
-boss.y-18,
-boss.w*(boss.hp/boss.maxHp),
-8
-);
-
-}
-
-function drawUnits(){
-
-for(const u of units){
-
-u.draw();
-
-}
-
-}
-
-function drawBackground(){
-
-ctx.clearRect(0,0,canvas.width,canvas.height);
-
-drawGround();
-
-drawBoss();
-
-drawUnits();
-
-drawEffects();
-
-}
-
-function updateUI(){
-
-ui.coin.textContent="Coin : "+state.coins;
-
-ui.boss.textContent=
-"Boss Lv : "+
-state.bossLevel+
-"  HP : "+
-Math.ceil(boss.hp)+
-"/"+
-boss.maxHp;
-
-ui.unit.textContent=
-"人数 "+
-units.length+
-"/"+
-state.maxUnits;
-
-}
-
-function loop(){
-
-updateGame();
-
-drawBackground();
-
-updateUI();
-
-requestAnimationFrame(loop);
-
+	requestAnimationFrame(loop);
 }
 
 loop();
 
-canvas.addEventListener("mousedown",e=>{
+canvas.addEventListener('mousedown', (e) => {
+	const rect = canvas.getBoundingClientRect();
 
-const rect=canvas.getBoundingClientRect();
+	const mx = e.clientX - rect.left;
+	const my = e.clientY - rect.top;
 
-const mx=e.clientX-rect.left;
-const my=e.clientY-rect.top;
+	for (let i = units.length - 1; i >= 0; i--) {
+		const u = units[i];
 
-for(let i=units.length-1;i>=0;i--){
+		if (u.dead) continue;
 
-const u=units[i];
-
-if(u.dead)continue;
-
-if(
-mx>=u.x-12&&
-mx<=u.x+12&&
-my>=u.y-28&&
-my<=u.y+24
-){
-
-state.drag=u;
-u.dragging=true;
-break;
-
-}
-
-}
-
+		if (mx >= u.x - 12 && mx <= u.x + 12 && my >= u.y - 28 && my <= u.y + 24) {
+			state.drag = u;
+			u.dragging = true;
+			break;
+		}
+	}
 });
 
-canvas.addEventListener("mousemove",e=>{
+canvas.addEventListener('mousemove', (e) => {
+	if (!state.drag) return;
 
-if(!state.drag)return;
+	const rect = canvas.getBoundingClientRect();
 
-const rect=canvas.getBoundingClientRect();
-
-state.drag.x=e.clientX-rect.left;
-state.drag.y=e.clientY-rect.top;
-
+	state.drag.x = e.clientX - rect.left;
+	state.drag.y = e.clientY - rect.top;
 });
 
-function releaseDrag(){
+function releaseDrag() {
+	if (!state.drag) return;
 
-if(!state.drag)return;
+	const u = state.drag;
 
-const u=state.drag;
+	u.dragging = false;
 
-u.dragging=false;
+	u.speed = 8;
 
-u.speed=8;
-
-state.drag=null;
-
+	state.drag = null;
 }
 
-canvas.addEventListener("mouseup",releaseDrag);
-canvas.addEventListener("mouseleave",releaseDrag);
+canvas.addEventListener('mouseup', releaseDrag);
+canvas.addEventListener('mouseleave', releaseDrag);
 
-document.getElementById("hpBtn").onclick=()=>{
+document.getElementById('hpBtn').onclick = () => {
+	const cost = 30 * state.hpLevel;
 
-const cost=30*state.hpLevel;
+	if (state.coins < cost) return;
 
-if(state.coins<cost)return;
+	state.coins -= cost;
 
-state.coins-=cost;
+	state.hpLevel++;
 
-state.hpLevel++;
-
-for(const u of units){
-
-u.maxHp=40+(state.hpLevel-1)*20;
-u.hp=u.maxHp;
-
-}
-
+	for (const u of units) {
+		u.maxHp = 40 + (state.hpLevel - 1) * 20;
+		u.hp = u.maxHp;
+	}
 };
 
-document.getElementById("atkBtn").onclick=()=>{
+document.getElementById('atkBtn').onclick = () => {
+	const cost = 30 * state.atkLevel;
 
-const cost=30*state.atkLevel;
+	if (state.coins < cost) return;
 
-if(state.coins<cost)return;
+	state.coins -= cost;
 
-state.coins-=cost;
+	state.atkLevel++;
 
-state.atkLevel++;
-
-for(const u of units){
-
-u.atk=5+(state.atkLevel-1)*3;
-
-}
-
+	for (const u of units) {
+		u.atk = 5 + (state.atkLevel - 1) * 3;
+	}
 };
 
-document.getElementById("countBtn").onclick=()=>{
+document.getElementById('countBtn').onclick = () => {
+	const cost = 50 * state.countLevel;
 
-const cost=50*state.countLevel;
+	if (state.coins < cost) return;
 
-if(state.coins<cost)return;
+	state.coins -= cost;
 
-state.coins-=cost;
+	state.countLevel++;
 
-state.countLevel++;
-
-state.maxUnits+=5;
-
+	state.maxUnits += 5;
 };
 
-for(let i=0;i<state.maxUnits;i++){
-
-spawnUnit();
-
+for (let i = 0; i < state.maxUnits; i++) {
+	spawnUnit();
 }
 
-function clamp(v,min,max){
-
-return Math.max(min,Math.min(max,v));
-
+function clamp(v, min, max) {
+	return Math.max(min, Math.min(max, v));
 }
 
-setInterval(()=>{
+setInterval(() => {
+	for (const u of units) {
+		if (u.dragging) continue;
 
-for(const u of units){
+		if (u.dead) continue;
 
-if(u.dragging)continue;
+		u.speed = clamp(u.speed, 1.2, 8);
 
-if(u.dead)continue;
+		if (u.speed > 1.2) {
+			u.speed *= 0.96;
+		}
 
-u.speed=clamp(u.speed,1.2,8);
+		u.y = groundY - 32;
+	}
+}, 16);
 
-if(u.speed>1.2){
-
-u.speed*=0.96;
-
-}
-
-u.y=groundY-32;
-
-}
-
-},16);
-
-document.addEventListener("contextmenu",e=>{
-
-e.preventDefault();
-
+document.addEventListener('contextmenu', (e) => {
+	e.preventDefault();
 });
 
-window.addEventListener("blur",()=>{
-
-releaseDrag();
-
+window.addEventListener('blur', () => {
+	releaseDrag();
 });
 
-canvas.addEventListener("touchstart",e=>{
+canvas.addEventListener(
+	'touchstart',
+	(e) => {
+		e.preventDefault();
 
-e.preventDefault();
+		const t = e.touches[0];
 
-const t=e.touches[0];
+		const rect = canvas.getBoundingClientRect();
 
-const rect=canvas.getBoundingClientRect();
+		const mx = t.clientX - rect.left;
+		const my = t.clientY - rect.top;
 
-const mx=t.clientX-rect.left;
-const my=t.clientY-rect.top;
+		for (let i = units.length - 1; i >= 0; i--) {
+			const u = units[i];
 
-for(let i=units.length-1;i>=0;i--){
+			if (mx >= u.x - 12 && mx <= u.x + 12 && my >= u.y - 28 && my <= u.y + 24) {
+				state.drag = u;
+				u.dragging = true;
+				break;
+			}
+		}
+	},
+	{ passive: false }
+);
 
-const u=units[i];
+canvas.addEventListener(
+	'touchmove',
+	(e) => {
+		e.preventDefault();
 
-if(
-mx>=u.x-12&&
-mx<=u.x+12&&
-my>=u.y-28&&
-my<=u.y+24
-){
+		if (!state.drag) return;
 
-state.drag=u;
-u.dragging=true;
-break;
+		const t = e.touches[0];
 
-}
+		const rect = canvas.getBoundingClientRect();
 
-}
+		state.drag.x = t.clientX - rect.left;
+		state.drag.y = t.clientY - rect.top;
+	},
+	{ passive: false }
+);
 
-},{passive:false});
-
-canvas.addEventListener("touchmove",e=>{
-
-e.preventDefault();
-
-if(!state.drag)return;
-
-const t=e.touches[0];
-
-const rect=canvas.getBoundingClientRect();
-
-state.drag.x=t.clientX-rect.left;
-state.drag.y=t.clientY-rect.top;
-
-},{passive:false});
-
-canvas.addEventListener("touchend",releaseDrag);
+canvas.addEventListener('touchend', releaseDrag);
 
 resize();
 loop();
 
-function initGame(){
+function initGame() {
+	state.coins = 0;
 
-state.coins=0;
+	state.hpLevel = 1;
+	state.atkLevel = 1;
+	state.countLevel = 1;
 
-state.hpLevel=1;
-state.atkLevel=1;
-state.countLevel=1;
+	state.bossLevel = 1;
 
-state.bossLevel=1;
+	state.maxUnits = 10;
 
-state.maxUnits=10;
+	state.spawnTimer = 0;
 
-state.spawnTimer=0;
+	units.length = 0;
+	state.effects.length = 0;
 
-units.length=0;
-state.effects.length=0;
+	boss.maxHp = 300;
+	boss.hp = 300;
+	boss.atk = 20;
+	boss.cooldown = 120;
 
-boss.maxHp=300;
-boss.hp=300;
-boss.atk=20;
-boss.cooldown=120;
-
-for(let i=0;i<state.maxUnits;i++){
-
-spawnUnit();
-
-}
-
+	for (let i = 0; i < state.maxUnits; i++) {
+		spawnUnit();
+	}
 }
 
 initGame();
 
-if(typeof window!=="undefined"){
-
-window.gameState=state;
-window.units=units;
-window.boss=boss;
-
+if (typeof window !== 'undefined') {
+	window.gameState = state;
+	window.units = units;
+	window.boss = boss;
 }
 
-console.log("Stick Army Mini Ready");
+console.log('Stick Army Mini Ready');
